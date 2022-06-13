@@ -1,0 +1,67 @@
+esphome:
+  name: homematic-gateway1
+  platform: ESP32
+  board: esp-wrover-kit
+
+
+wifi:
+  ssid: "xxxxxxx"
+  password: "xxxxxxxxxxxx"
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "HMLGW Fallback Hotspot"
+    password: "xxxxxxxxxxxxxx"
+
+captive_portal:
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+
+ota:
+
+external_components:
+  - source: github://andyboeh/esphome-weider_wp
+    components: weider_wp
+
+uart:
+  tx_pin: GPIO17
+  rx_pin: GPIO5
+  baud_rate: 9600
+  id: uart_bus
+
+sensor:
+  - platform: weider_wp
+    dtr_pin:
+      number: GPIO33
+      mode: OUTPUT
+      inverted: yes
+    feed_temperature: 
+      name: "T-Vorlauf"
+    brine_temperature: 
+      name: "T-Sole"
+    outside_temperature: 
+      name: "T-Aussen"
+    room_temperature: 
+      name: "T-Raum"
+    buffer_temperature: 
+      name: "T-Puffer"
+    boiler_temperature: 
+      name: "T-Boiler"
+    heatpump_1_temperature: 
+      name: "T-WP1"
+    heatpump_2_temperature: 
+      name: "T-WP2"
+    reserved_1_temperature: 
+      name: "T-Reserv1"
+    reserved_2_temperature: 
+      name: "T-Reserv2"
+    room_set_temperature: 
+      name: "T-Raumsoll"
+    feed_2_temperature: 
+      name: "T-Vorlauf2"
+    brine_2_temperature: 
+      name: "T-Sole2"
