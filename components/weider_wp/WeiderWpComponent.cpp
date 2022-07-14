@@ -53,10 +53,64 @@ void WeiderWpComponent::setup() {
     name_to_sensor_mapping_.insert({"T-Raumsoll", this->room_set_temperature_sensor_});
     name_to_sensor_mapping_.insert({"T-Vorlauf2", this->feed_2_temperature_sensor_});
     name_to_sensor_mapping_.insert({"T-Sole2   ", this->brine_2_temperature_sensor_});
+    /*name_to_sensor_mapping_.insert({"UP Heizung", this->circ_pump_heating_sensor_});
+    name_to_sensor_mapping_.insert({"UP Grundwasser", this->circ_pump_water_sensor_});
+    name_to_sensor_mapping_.insert({"WP1 laeuft", this->heat_pump_1_active_sensor_});
+    name_to_sensor_mapping_.insert({"WP2 laeuft", this->heat_pump_2_active_sensor_});
+    name_to_sensor_mapping_.insert({"UP Boiler ", this->circ_pump_boiler_sensor_});
+    name_to_sensor_mapping_.insert({"UP1 Mischer", this->heat_pump_1_mixer_sensor_});
+    name_to_sensor_mapping_.insert({"UP2 Mischer", this->heat_pump_2_mixer_sensor_});
+    name_to_sensor_mapping_.insert({"Mischer1 Auf", this->mixer_1_open_sensor_});
+    name_to_sensor_mapping_.insert({"Mischer1 Zu ", this->mixer_1_close_sensor_});
+    name_to_sensor_mapping_.insert({"Mischer2 Auf", this->mixer_2_open_sensor_});
+    name_to_sensor_mapping_.insert({"Mischer2 Zu ", this->mixer_2_close_sensor_});
+    name_to_sensor_mapping_.insert({"E02 Sperre Heiz", this->block_heating_sensor_});
+    name_to_sensor_mapping_.insert({"E08 Anlaufstrom", this->startup_current_sensor_});*/
+    this->last_update = millis();
+    this->clearRxBuffer();
 }
 
 void WeiderWpComponent::loop() {
+    this->write();
     this->read();
+    this->add_polling_commands();
+}
+
+void WeiderWpComponent::add_polling_commands() {
+    if((millis() - this->last_update) > this->update_interval) {
+        this->write_queue.push_back(std::pair<std::string,std::string>("V", ""));
+        this->write_queue.push_back(std::pair<std::string,std::string>("M", ""));
+        this->write_queue.push_back(std::pair<std::string,std::string>("I", ""));
+        this->write_queue.push_back(std::pair<std::string,std::string>("O", ""));
+        this->write_queue.push_back(std::pair<std::string,std::string>("F", ""));
+        this->last_update = millis();
+    }
+}
+
+void WeiderWpComponent::write() {
+    if(this->write_queue.size() == 0)
+        return;
+   
+    if(this->expect)
+        return;
+
+    std::pair<std::string,std::string> cmd = this->write_queue.front();
+    
+    std::string cmd_string = cmd.first() + (cmd.second().size() > 0 ? " " + cmd.second() + "\r\n" : "\r\n");
+    this->write_array(cmd_string.c_str(), cmd_string.size());
+    this->expect = true;
+    this->last_command = cmd.first();
+    this->write_queue.erase(this->write_queue.begin());
+}
+
+void WeiderWpComponent::clearRxBuffer() {
+    uint8_t cnt = this->available();
+    while(cnt > 0) {
+        this->read_array(this->buffer, cnt);
+        cnt = this->available();
+    }
+    cnt = 0;
+    this->bytes = 0;
 }
 
 void WeiderWpComponent::read() {
@@ -69,12 +123,7 @@ void WeiderWpComponent::read() {
             cnt = this->available();
         } else {
             //ESP_LOGD(TAG, "rcv'd incomplete frame, clearing buffer");
-            while(cnt > 0) {
-                this->read_array(this->buffer, cnt);
-                cnt = this->available();
-            }
-            cnt = 0;
-            this->bytes = 0;
+            this->clearRxBuffer();
         }
     }
     if(this->bytes == 0)
@@ -91,26 +140,34 @@ void WeiderWpComponent::read() {
         //ESP_LOGD(TAG, "rcv'd incomplete frame: frame end not found");
         return;
     }
-    size_t pos = 0;
-    while((pos = buf.find(LINE_DELIMITER)) != std::string::npos) {
-        std::string token = buf.substr(0, pos);
-        ESP_LOGD(TAG, token.c_str());
-        if(token.find("T-") != std::string::npos) {
-            std::string key = token.substr(0, 10);
-            std::string val = token.substr(10, 7);
-            float val_f = atof(val.c_str());
-            std::map<std::string, sensor::Sensor*>::iterator it;
-            for(it = this->name_to_sensor_mapping_.begin(); it != this->name_to_sensor_mapping_.end(); it++) {
-                if(key.find(it->first) != std::string::npos) {
-                    if(it->second)
-                        it->second->publish_state(val_f);
+    if(!this->expect) {
+        ESP_LOGD(TAG, "Did not expect a data packet, switching to manual mode");
+        this->write_queue.insert(0, std::pair<std::string, std::string>("A", ""));
+    } else {
+        // We are expecting a response, so we parse the response according to the sent command
+        size_t pos = 0;
+        while((pos = buf.find(LINE_DELIMITER)) != std::string::npos) {
+            std::string token = buf.substr(0, pos);
+            ESP_LOGD(TAG, token.c_str());
+            if(token.find("T-") != std::string::npos) {
+                std::string key = token.substr(0, 10);
+                std::string val = token.substr(10, 7);
+                float val_f = atof(val.c_str());
+                std::map<std::string, sensor::Sensor*>::iterator it;
+                for(it = this->name_to_sensor_mapping_.begin(); it != this->name_to_sensor_mapping_.end(); it++) {
+                    if(key.find(it->first) != std::string::npos) {
+                        if(it->second)
+                            it->second->publish_state(val_f);
+                    }
                 }
             }
+            buf.erase(0, pos + strlen(LINE_DELIMITER));
         }
-        buf.erase(0, pos + strlen(LINE_DELIMITER));
     }
+
     //ESP_LOGD(TAG, "Frame parsed successfully");
     this->bytes = 0;
+    this->expect = false;
 }
 
 } // hmlgw

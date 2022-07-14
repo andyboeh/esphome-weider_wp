@@ -38,6 +38,11 @@ class WeiderWpComponent : public Component, public uart::UARTDevice {
   uint8_t buffer[4096];
   GPIOPin *pin_dtr_{nullptr};
   std::map<std::string, sensor::Sensor*> name_to_sensor_mapping_;
+  std::vector<std::pair<std::string, std::string> > write_queue;
+  bool expect{false};
+  std::string last_command;
+  int update_interval{5000};
+  uint32_t last_update_{0};
   
   sensor::Sensor *feed_temperature_sensor_;
   sensor::Sensor *brine_temperature_sensor_;

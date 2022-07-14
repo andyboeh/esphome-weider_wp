@@ -6,6 +6,8 @@ Weider protocol and hardware documentation: [WEIDER Heizungsregelung](https://co
 
 So far, only automatic mode is supported since polling mode does not seem to deliver different, more or better data.
 
+The code is heavily WiP and the configuration syntax is likely to change once setting parameters and proper representation as a climate entity is supported.
+
 ## Hardware setup
 
 Connect your ESP via RS232 to the heat pump according to the docs of Weider. I use an SP3232 level shifter and connected the DTR/DSR signals to ESP inputs/outputs. This allows controlling PC or modem mode, but is not a strict requirements. If left floating, the heat pump is in PC mode automatically. The RTS/CTS signal is bridged at my DB9 connector, I'm not sure if this is required (the Weider docs use hardware flow control, so I assumed yes).
