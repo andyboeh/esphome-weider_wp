@@ -3,6 +3,7 @@
 #include "esphome/core/component.h"
 #include "esphome/components/uart/uart.h"
 #include "esphome/components/sensor/sensor.h"
+#include "esphome/components/binary_sensor/binary_sensor.h"
 #include <map>
 
 namespace esphome {
@@ -28,7 +29,40 @@ class WeiderWpComponent : public Component, public uart::UARTDevice {
   void set_room_set_temperature_sensor(sensor::Sensor *room_set_temperature_sensor) { room_set_temperature_sensor_ = room_set_temperature_sensor; }
   void set_feed_2_temperature_sensor(sensor::Sensor *feed_2_temperature_sensor) { feed_2_temperature_sensor_ = feed_2_temperature_sensor; }
   void set_brine_2_temperature_sensor(sensor::Sensor *brine_2_temperature_sensor) { brine_2_temperature_sensor_ = brine_2_temperature_sensor; }
-  
+
+  void set_e00_binary_sensor(binary_sensor::BinarySensor *e00_binary_sensor) { e00_binary_sensor_ = e00_binary_sensor; }
+  void set_e01_binary_sensor(binary_sensor::BinarySensor *e01_binary_sensor) { e01_binary_sensor_ = e01_binary_sensor; }
+  void set_e02_binary_sensor(binary_sensor::BinarySensor *e02_binary_sensor) { e02_binary_sensor_ = e02_binary_sensor; }
+  void set_e03_binary_sensor(binary_sensor::BinarySensor *e03_binary_sensor) { e03_binary_sensor_ = e03_binary_sensor; }
+  void set_e04_binary_sensor(binary_sensor::BinarySensor *e04_binary_sensor) { e04_binary_sensor_ = e04_binary_sensor; }
+  void set_e05_binary_sensor(binary_sensor::BinarySensor *e05_binary_sensor) { e05_binary_sensor_ = e05_binary_sensor; }
+  void set_e06_binary_sensor(binary_sensor::BinarySensor *e06_binary_sensor) { e06_binary_sensor_ = e06_binary_sensor; }
+  void set_e07_binary_sensor(binary_sensor::BinarySensor *e07_binary_sensor) { e07_binary_sensor_ = e07_binary_sensor; }
+  void set_e08_binary_sensor(binary_sensor::BinarySensor *e08_binary_sensor) { e08_binary_sensor_ = e08_binary_sensor; }
+  void set_e09_binary_sensor(binary_sensor::BinarySensor *e09_binary_sensor) { e09_binary_sensor_ = e09_binary_sensor; }
+  void set_e10_binary_sensor(binary_sensor::BinarySensor *e10_binary_sensor) { e10_binary_sensor_ = e10_binary_sensor; }
+  void set_e11_binary_sensor(binary_sensor::BinarySensor *e11_binary_sensor) { e11_binary_sensor_ = e11_binary_sensor; }
+  void set_e12_binary_sensor(binary_sensor::BinarySensor *e12_binary_sensor) { e12_binary_sensor_ = e12_binary_sensor; }
+  void set_e13_binary_sensor(binary_sensor::BinarySensor *e13_binary_sensor) { e13_binary_sensor_ = e13_binary_sensor; }
+  void set_e14_binary_sensor(binary_sensor::BinarySensor *e14_binary_sensor) { e14_binary_sensor_ = e14_binary_sensor; }
+  void set_e15_binary_sensor(binary_sensor::BinarySensor *e15_binary_sensor) { e15_binary_sensor_ = e15_binary_sensor; }
+
+  void set_a00_binary_sensor(binary_sensor::BinarySensor *a00_binary_sensor) { a00_binary_sensor_ = a00_binary_sensor; }
+  void set_a01_binary_sensor(binary_sensor::BinarySensor *a01_binary_sensor) { a01_binary_sensor_ = a01_binary_sensor; }
+  void set_a02_binary_sensor(binary_sensor::BinarySensor *a02_binary_sensor) { a02_binary_sensor_ = a02_binary_sensor; }
+  void set_a03_binary_sensor(binary_sensor::BinarySensor *a03_binary_sensor) { a03_binary_sensor_ = a03_binary_sensor; }
+  void set_a04_binary_sensor(binary_sensor::BinarySensor *a04_binary_sensor) { a04_binary_sensor_ = a04_binary_sensor; }
+  void set_a05_binary_sensor(binary_sensor::BinarySensor *a05_binary_sensor) { a05_binary_sensor_ = a05_binary_sensor; }
+  void set_a06_binary_sensor(binary_sensor::BinarySensor *a06_binary_sensor) { a06_binary_sensor_ = a06_binary_sensor; }
+  void set_a07_binary_sensor(binary_sensor::BinarySensor *a07_binary_sensor) { a07_binary_sensor_ = a07_binary_sensor; }
+  void set_a08_binary_sensor(binary_sensor::BinarySensor *a08_binary_sensor) { a08_binary_sensor_ = a08_binary_sensor; }
+  void set_a09_binary_sensor(binary_sensor::BinarySensor *a09_binary_sensor) { a09_binary_sensor_ = a09_binary_sensor; }
+  void set_a10_binary_sensor(binary_sensor::BinarySensor *a10_binary_sensor) { a10_binary_sensor_ = a10_binary_sensor; }
+  void set_a11_binary_sensor(binary_sensor::BinarySensor *a11_binary_sensor) { a11_binary_sensor_ = a11_binary_sensor; }
+  void set_a12_binary_sensor(binary_sensor::BinarySensor *a12_binary_sensor) { a12_binary_sensor_ = a12_binary_sensor; }
+  void set_a13_binary_sensor(binary_sensor::BinarySensor *a13_binary_sensor) { a13_binary_sensor_ = a13_binary_sensor; }
+  void set_a14_binary_sensor(binary_sensor::BinarySensor *a14_binary_sensor) { a14_binary_sensor_ = a14_binary_sensor; }
+  void set_a15_binary_sensor(binary_sensor::BinarySensor *a15_binary_sensor) { a15_binary_sensor_ = a15_binary_sensor; }
 
   void set_dtr_pin(GPIOPin *pin_dtr) { pin_dtr_ = pin_dtr; }
   float get_setup_priority() const override { return setup_priority::DATA; }
@@ -38,6 +72,7 @@ class WeiderWpComponent : public Component, public uart::UARTDevice {
   uint8_t buffer[4096];
   GPIOPin *pin_dtr_{nullptr};
   std::map<std::string, sensor::Sensor*> name_to_sensor_mapping_;
+  std::map<std::string, binary_sensor::BinarySensor*> name_to_binary_sensor_mapping_;
   
   sensor::Sensor *feed_temperature_sensor_;
   sensor::Sensor *brine_temperature_sensor_;
@@ -52,6 +87,41 @@ class WeiderWpComponent : public Component, public uart::UARTDevice {
   sensor::Sensor *room_set_temperature_sensor_;
   sensor::Sensor *feed_2_temperature_sensor_;
   sensor::Sensor *brine_2_temperature_sensor_;
+
+  binary_sensor::BinarySensor *e00_binary_sensor_;
+  binary_sensor::BinarySensor *e01_binary_sensor_;
+  binary_sensor::BinarySensor *e02_binary_sensor_;
+  binary_sensor::BinarySensor *e03_binary_sensor_;
+  binary_sensor::BinarySensor *e04_binary_sensor_;
+  binary_sensor::BinarySensor *e05_binary_sensor_;
+  binary_sensor::BinarySensor *e06_binary_sensor_;
+  binary_sensor::BinarySensor *e07_binary_sensor_;
+  binary_sensor::BinarySensor *e08_binary_sensor_;
+  binary_sensor::BinarySensor *e09_binary_sensor_;
+  binary_sensor::BinarySensor *e10_binary_sensor_;
+  binary_sensor::BinarySensor *e11_binary_sensor_;
+  binary_sensor::BinarySensor *e12_binary_sensor_;
+  binary_sensor::BinarySensor *e13_binary_sensor_;
+  binary_sensor::BinarySensor *e14_binary_sensor_;
+  binary_sensor::BinarySensor *e15_binary_sensor_;
+
+  binary_sensor::BinarySensor *a00_binary_sensor_;
+  binary_sensor::BinarySensor *a01_binary_sensor_;
+  binary_sensor::BinarySensor *a02_binary_sensor_;
+  binary_sensor::BinarySensor *a03_binary_sensor_;
+  binary_sensor::BinarySensor *a04_binary_sensor_;
+  binary_sensor::BinarySensor *a05_binary_sensor_;
+  binary_sensor::BinarySensor *a06_binary_sensor_;
+  binary_sensor::BinarySensor *a07_binary_sensor_;
+  binary_sensor::BinarySensor *a08_binary_sensor_;
+  binary_sensor::BinarySensor *a09_binary_sensor_;
+  binary_sensor::BinarySensor *a10_binary_sensor_;
+  binary_sensor::BinarySensor *a11_binary_sensor_;
+  binary_sensor::BinarySensor *a12_binary_sensor_;
+  binary_sensor::BinarySensor *a13_binary_sensor_;
+  binary_sensor::BinarySensor *a14_binary_sensor_;
+  binary_sensor::BinarySensor *a15_binary_sensor_;
+
 };
 
 }  // namespace weider_wp

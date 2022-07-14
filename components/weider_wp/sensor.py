@@ -14,18 +14,15 @@
 
 import esphome.codegen as cg
 import esphome.config_validation as cv
-from esphome import pins
-from esphome.components import uart, sensor
+from esphome.components import sensor
 from esphome.const import CONF_ID, UNIT_CELSIUS, DEVICE_CLASS_TEMPERATURE, STATE_CLASS_MEASUREMENT
 
 # ESPHome doesn't know the Stream abstraction yet, so hardcode to use a UART for now.
 
-DEPENDENCIES = ["uart"]
+DEPENDENCIES = ["weider_wp"]
 
-weiderwp_ns = cg.esphome_ns.namespace("weider_wp")
-WeiderWpComponent = weiderwp_ns.class_("WeiderWpComponent", cg.Component, uart.UARTDevice)
+from . import WeiderWpComponent
 
-CONF_DTR_PIN = 'dtr_pin'
 CONF_TEMPERATURE_FEED = 'feed_temperature'
 CONF_TEMPERATURE_BRINE = 'brine_temperature'
 CONF_TEMPERATURE_OUTSIDE = 'outside_temperature'
@@ -50,8 +47,7 @@ CONF_LB = 'lb'
 CONFIG_SCHEMA = (
 	cv.Schema(
 		{
-			cv.GenerateID(): cv.declare_id(WeiderWpComponent),
-			cv.Optional(CONF_DTR_PIN): pins.gpio_output_pin_schema,
+			cv.GenerateID(): cv.use_id(WeiderWpComponent),
 			cv.Optional(CONF_TEMPERATURE_FEED): sensor.sensor_schema(
 			    unit_of_measurement = UNIT_CELSIUS,
 			    accuracy_decimals = 1,
@@ -133,80 +129,72 @@ CONFIG_SCHEMA = (
 			
 		}
 	)
-    .extend(cv.COMPONENT_SCHEMA)
-    .extend(uart.UART_DEVICE_SCHEMA)
 )
 
 async def to_code(config):
-    var = cg.new_Pvariable(config[CONF_ID])
-    await cg.register_component(var, config)
-    await uart.register_uart_device(var, config)
-
-    if CONF_DTR_PIN in config:
-        dtr = await cg.gpio_pin_expression(config[CONF_DTR_PIN])
-        cg.add(var.set_dtr_pin(dtr))
+    parent = await cg.get_variable(config[CONF_ID])
 
     if CONF_TEMPERATURE_FEED in config:
         conf = config[CONF_TEMPERATURE_FEED]
         sens = await sensor.new_sensor(conf)
-        cg.add(var.set_feed_temperature_sensor(sens))
+        cg.add(parent.set_feed_temperature_sensor(sens))
 
     if CONF_TEMPERATURE_BRINE in config:
         conf = config[CONF_TEMPERATURE_BRINE]
         sens = await sensor.new_sensor(conf)
-        cg.add(var.set_brine_temperature_sensor(sens))
+        cg.add(parent.set_brine_temperature_sensor(sens))
 
     if CONF_TEMPERATURE_OUTSIDE in config:
         conf = config[CONF_TEMPERATURE_OUTSIDE]
         sens = await sensor.new_sensor(conf)
-        cg.add(var.set_outside_temperature_sensor(sens))
+        cg.add(parent.set_outside_temperature_sensor(sens))
 
     if CONF_TEMPERATURE_ROOM in config:
         conf = config[CONF_TEMPERATURE_ROOM]
         sens = await sensor.new_sensor(conf)
-        cg.add(var.set_room_temperature_sensor(sens))
+        cg.add(parent.set_room_temperature_sensor(sens))
 
     if CONF_TEMPERATURE_BUFFER in config:
         conf = config[CONF_TEMPERATURE_BUFFER]
         sens = await sensor.new_sensor(conf)
-        cg.add(var.set_buffer_temperature_sensor(sens))
+        cg.add(parent.set_buffer_temperature_sensor(sens))
 
     if CONF_TEMPERATURE_BOILER in config:
         conf = config[CONF_TEMPERATURE_BOILER]
         sens = await sensor.new_sensor(conf)
-        cg.add(var.set_boiler_temperature_sensor(sens))
+        cg.add(parent.set_boiler_temperature_sensor(sens))
 
     if CONF_TEMPERATURE_HEATPUMP_1 in config:
         conf = config[CONF_TEMPERATURE_HEATPUMP_1]
         sens = await sensor.new_sensor(conf)
-        cg.add(var.set_heatpump_1_temperature_sensor(sens))
+        cg.add(parent.set_heatpump_1_temperature_sensor(sens))
 
     if CONF_TEMPERATURE_HEATPUMP_2 in config:
         conf = config[CONF_TEMPERATURE_HEATPUMP_2]
         sens = await sensor.new_sensor(conf)
-        cg.add(var.set_heatpump_2_temperature_sensor(sens))
+        cg.add(parent.set_heatpump_2_temperature_sensor(sens))
 
     if CONF_TEMPERATURE_RESERVED_1 in config:
         conf = config[CONF_TEMPERATURE_RESERVED_1]
         sens = await sensor.new_sensor(conf)
-        cg.add(var.set_reserved_1_temperature_sensor(sens))
+        cg.add(parent.set_reserved_1_temperature_sensor(sens))
 
     if CONF_TEMPERATURE_RESERVED_2 in config:
         conf = config[CONF_TEMPERATURE_RESERVED_2]
         sens = await sensor.new_sensor(conf)
-        cg.add(var.set_reserved_2_temperature_sensor(sens))
+        cg.add(parent.set_reserved_2_temperature_sensor(sens))
 
     if CONF_TEMPERATURE_ROOM_SET in config:
         conf = config[CONF_TEMPERATURE_ROOM_SET]
         sens = await sensor.new_sensor(conf)
-        cg.add(var.set_room_set_temperature_sensor(sens))
+        cg.add(parent.set_room_set_temperature_sensor(sens))
 
     if CONF_TEMPERATURE_FEED_2 in config:
         conf = config[CONF_TEMPERATURE_FEED_2]
         sens = await sensor.new_sensor(conf)
-        cg.add(var.set_feed_2_temperature_sensor(sens))
+        cg.add(parent.set_feed_2_temperature_sensor(sens))
 
     if CONF_TEMPERATURE_BRINE_2 in config:
         conf = config[CONF_TEMPERATURE_BRINE_2]
         sens = await sensor.new_sensor(conf)
-        cg.add(var.set_brine_2_temperature_sensor(sens))
+        cg.add(parent.set_brine_2_temperature_sensor(sens))
