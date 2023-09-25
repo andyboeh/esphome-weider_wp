@@ -9,6 +9,13 @@
 namespace esphome {
 namespace weider_wp {
 
+typedef enum {
+    PROCESS_NONE,
+    PROCESS_SENSORS,
+    PROCESS_COMMAND,
+    PROCESS_CODES,
+} t_process_states;
+
 
 class WeiderWpComponent : public Component, public uart::UARTDevice {
  public:
@@ -41,11 +48,6 @@ class WeiderWpComponent : public Component, public uart::UARTDevice {
   void set_e08_binary_sensor(binary_sensor::BinarySensor *e08_binary_sensor) { e08_binary_sensor_ = e08_binary_sensor; }
   void set_e09_binary_sensor(binary_sensor::BinarySensor *e09_binary_sensor) { e09_binary_sensor_ = e09_binary_sensor; }
   void set_e10_binary_sensor(binary_sensor::BinarySensor *e10_binary_sensor) { e10_binary_sensor_ = e10_binary_sensor; }
-  void set_e11_binary_sensor(binary_sensor::BinarySensor *e11_binary_sensor) { e11_binary_sensor_ = e11_binary_sensor; }
-  void set_e12_binary_sensor(binary_sensor::BinarySensor *e12_binary_sensor) { e12_binary_sensor_ = e12_binary_sensor; }
-  void set_e13_binary_sensor(binary_sensor::BinarySensor *e13_binary_sensor) { e13_binary_sensor_ = e13_binary_sensor; }
-  void set_e14_binary_sensor(binary_sensor::BinarySensor *e14_binary_sensor) { e14_binary_sensor_ = e14_binary_sensor; }
-  void set_e15_binary_sensor(binary_sensor::BinarySensor *e15_binary_sensor) { e15_binary_sensor_ = e15_binary_sensor; }
 
   void set_a00_binary_sensor(binary_sensor::BinarySensor *a00_binary_sensor) { a00_binary_sensor_ = a00_binary_sensor; }
   void set_a01_binary_sensor(binary_sensor::BinarySensor *a01_binary_sensor) { a01_binary_sensor_ = a01_binary_sensor; }
@@ -67,13 +69,24 @@ class WeiderWpComponent : public Component, public uart::UARTDevice {
   void set_dtr_pin(GPIOPin *pin_dtr) { pin_dtr_ = pin_dtr; }
   float get_setup_priority() const override { return setup_priority::DATA; }
 
+  void check_timeout();
+  void process_sensors();
+  void process_codes();
+  void write();
+
  protected:
-  int bytes;
-  uint8_t buffer[4096];
+  std::string buffer;
   GPIOPin *pin_dtr_{nullptr};
+  uint32_t last_received{0};
+  uint32_t setup_timeout{0};
+  bool input_states_[11];
+  bool output_states_[16];
+  t_process_states process_flag_{PROCESS_NONE};
   std::map<std::string, sensor::Sensor*> name_to_sensor_mapping_;
-  std::map<std::string, binary_sensor::BinarySensor*> name_to_binary_sensor_mapping_;
-  
+  std::vector<binary_sensor::BinarySensor*> binary_sensors_;
+  std::string command_expect_;
+  std::vector<std::string> commands_to_send_;
+
   sensor::Sensor *feed_temperature_sensor_;
   sensor::Sensor *brine_temperature_sensor_;
   sensor::Sensor *outside_temperature_sensor_;
@@ -99,11 +112,6 @@ class WeiderWpComponent : public Component, public uart::UARTDevice {
   binary_sensor::BinarySensor *e08_binary_sensor_;
   binary_sensor::BinarySensor *e09_binary_sensor_;
   binary_sensor::BinarySensor *e10_binary_sensor_;
-  binary_sensor::BinarySensor *e11_binary_sensor_;
-  binary_sensor::BinarySensor *e12_binary_sensor_;
-  binary_sensor::BinarySensor *e13_binary_sensor_;
-  binary_sensor::BinarySensor *e14_binary_sensor_;
-  binary_sensor::BinarySensor *e15_binary_sensor_;
 
   binary_sensor::BinarySensor *a00_binary_sensor_;
   binary_sensor::BinarySensor *a01_binary_sensor_;

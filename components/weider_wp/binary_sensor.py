@@ -34,11 +34,6 @@ CONF_E07 = "heatpump_e07"
 CONF_E08 = "heatpump_e08"
 CONF_E09 = "heatpump_e09"
 CONF_E10 = "heatpump_e10"
-CONF_E11 = "heatpump_e11"
-CONF_E12 = "heatpump_e12"
-CONF_E13 = "heatpump_e13"
-CONF_E14 = "heatpump_e14"
-CONF_E15 = "heatpump_e15"
 
 CONF_A00 = "heatpump_a00"
 CONF_A01 = "heatpump_a01"
@@ -72,11 +67,6 @@ CONFIG_SCHEMA = (
 			cv.Optional(CONF_E08): binary_sensor.binary_sensor_schema(),
 			cv.Optional(CONF_E09): binary_sensor.binary_sensor_schema(),
 			cv.Optional(CONF_E10): binary_sensor.binary_sensor_schema(),
-			cv.Optional(CONF_E11): binary_sensor.binary_sensor_schema(),
-			cv.Optional(CONF_E12): binary_sensor.binary_sensor_schema(),
-			cv.Optional(CONF_E13): binary_sensor.binary_sensor_schema(),
-			cv.Optional(CONF_E14): binary_sensor.binary_sensor_schema(),
-			cv.Optional(CONF_E15): binary_sensor.binary_sensor_schema(),
 
 			cv.Optional(CONF_A00): binary_sensor.binary_sensor_schema(),
 			cv.Optional(CONF_A01): binary_sensor.binary_sensor_schema(),
@@ -146,26 +136,6 @@ async def to_code(config):
 		conf = config[CONF_E10]
 		sens = await binary_sensor.new_binary_sensor(conf)
 		cg.add(parent.set_e10_binary_sensor(sens))
-	if CONF_E11 in config:
-		conf = config[CONF_E11]
-		sens = await binary_sensor.new_binary_sensor(conf)
-		cg.add(parent.set_e11_binary_sensor(sens))
-	if CONF_E12 in config:
-		conf = config[CONF_E12]
-		sens = await binary_sensor.new_binary_sensor(conf)
-		cg.add(parent.set_e12_binary_sensor(sens))
-	if CONF_E13 in config:
-		conf = config[CONF_E13]
-		sens = await binary_sensor.new_binary_sensor(conf)
-		cg.add(parent.set_e13_binary_sensor(sens))
-	if CONF_E14 in config:
-		conf = config[CONF_E14]
-		sens = await binary_sensor.new_binary_sensor(conf)
-		cg.add(parent.set_e14_binary_sensor(sens))
-	if CONF_E15 in config:
-		conf = config[CONF_E15]
-		sens = await binary_sensor.new_binary_sensor(conf)
-		cg.add(parent.set_e15_binary_sensor(sens))
 
 	if CONF_A00 in config:
 		conf = config[CONF_A00]
