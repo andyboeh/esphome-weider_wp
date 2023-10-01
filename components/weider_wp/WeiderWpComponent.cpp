@@ -102,7 +102,11 @@ void WeiderWpComponent::loop() {
 }
 
 void WeiderWpComponent::write() {
-
+    if(this->commands_to_send_.size() > 0) {
+        this->command_expect_ = this->commands_to_send_.front();
+        this->commands_to_send_.pop();
+        this->write_str(this->command_expect_.c_str());
+    }
 }
 
 void WeiderWpComponent::check_timeout() {
@@ -132,6 +136,66 @@ void WeiderWpComponent::process_codes() {
 
 }
 
+void WeiderWpComponent::process_error(std::string msg) {
+    std::string part = msg.substr(4, msg.find(" ", 4) - 4);
+    std::string error;
+
+    int err = atoi(msg.substr(msg.rfind(" ") + 1).c_str());
+    //ESP_LOGD(TAG, "Error: %s in part %s with message %d", msg.c_str(), part.c_str(), err);
+    if(part == "Waermepumpe") {
+        if(err & (1 << 0))
+            error += "Pressostat WP1, ";
+        if(err & (1 << 1))
+            error += "Pressostat WP2, ";
+        if(err & (1 << 2))
+            error += "Sole/GW zu kalt, ";
+        if(err & (1 << 3))
+            error += "Hochdruck WP1, ";
+        if(err & (1 << 4))
+            error += "Hochdruck WP2, ";
+        if(err & (1 << 5))
+            error += "Verdampfer WP1, ";
+        if(err & (1 << 6))
+            error += "Verdampfer WP2, ";
+        // According to the docs, this is 0x20, but this is plain wrong.
+        if(err & (1 << 7))
+            error += "SI-Kette/Thermorel., ";
+    } else if(part == "Temp.sensor") {
+        if(err & (1 << 0))
+            error += "Vorlauffühler fehlt, ";
+        if(err & (1 << 1))
+            error += "Solefühler fehlt, ";
+        if(err & (1 << 2))
+            error += "Außenfühler fehlt, ";
+        if(err & (1 << 3))
+            error += "Raumfühler fehlt, ";
+        if(err & (1 << 4))
+            error += "Pufferfühler fehlt, ";
+        if(err & (1 << 5))
+            error += "Boilerfühler fehlt, ";
+        if(err & (1 << 6))
+            error += "Verdampferfühler WP1 fehlt, ";
+        if(err & (1 << 7))
+            error += "Verdampferfühler WP2 fehlt, ";
+        if(err == 0)
+            error += "Reservefühler fehlt, ";
+    } else if(part == "Stroemung") {
+        if(err & (1 << 0))
+            error += "SWE1 immer aus, ";
+        if(err & (1 << 1))
+            error += "SWE2 immer aus, ";
+        if(err & (1 << 2))
+            error += "SWE1 immer ein, ";
+        if(err & (1 << 3))
+            error += "SWE2 immer ein, ";
+        if(err & (1 << 4))
+            error += "GW Vorrat WP1, ";
+        if(err & (1 << 5))
+            error += "GW Vorrat WP2, ";
+    }
+    this->current_error_ += msg.substr(4) + ": " + error.substr(0, error.size() - 2);
+}
+
 void WeiderWpComponent::process_sensors() {
     size_t pos = this->buffer.find(LINE_DELIMITER);
     if(pos == std::string::npos)
@@ -142,7 +206,7 @@ void WeiderWpComponent::process_sensors() {
 
     std::string temp = this->buffer.substr(0, pos);
     while(temp[0] == '\f' || temp[0] == '\r' || temp[0] == '\n') {
-        ESP_LOGD(TAG, "Removed %c", temp[0]);
+        ESP_LOGD(TAG, "Removed %x", temp[0]);
         temp.erase(0, 1);
     }
 
@@ -157,19 +221,25 @@ void WeiderWpComponent::process_sensors() {
                     it->second->publish_state(val_f);
             }
         }
-    } else if(temp[0] == 'E' && temp[3] == ' ') {
+    } else if(temp[0] == 'E' && temp[3] == ' ' && temp[1] != 'r') {
         // Input
         int number = atoi(temp.substr(1,2).c_str());
-        this->input_states_[number] = true;
+        if(number > 0 && number < 11)
+            this->input_states_[number] = true;
     } else if(temp[0] == 'A' && temp[3] == ' ') {
         // Output
         int number = atoi(temp.substr(1,2).c_str());
-        this->output_states_[number] = true;
+        if(number > 0 && number < 16)
+            this->output_states_[number] = true;
+    } else if(temp.rfind("Err", 0) == 0) {
+        // Error
+        this->process_error(temp);
     } else {
         ESP_LOGD(TAG, "Did not yet understand %s", temp.c_str());
     }
     this->buffer.erase(0, pos + strlen(LINE_DELIMITER));
-    if(this->buffer == "\r\n") {
+    if(this->buffer == "\r\n" || this->buffer == "") {
+        ESP_LOGD(TAG, "Set flag NONE");
         this->process_flag_ = PROCESS_NONE;
         this->buffer.clear();
         for(int i=0; i<16; i++) {
@@ -192,9 +262,16 @@ void WeiderWpComponent::process_sensors() {
                 this->input_states_[i] = false;
             }
         }
+        if(this->error_sensor_)
+            this->error_sensor_->publish_state(this->current_error_);
+        this->current_error_.clear();
     }
     //ESP_LOGD(TAG, "Buffer left: %s", this->buffer.c_str());
 
+}
+
+void WeiderWpComponent::reset() {
+    this->commands_to_send_.push("R\r\n");
 }
 
 void WeiderWpComponent::read() {
@@ -226,7 +303,7 @@ void WeiderWpComponent::read() {
     this->buffer.append(reinterpret_cast<const char*>(buf), bytes);
 
     if(this->buffer.find(FRAME_START) != 0 && this->command_expect_.empty()) {
-        //ESP_LOGD(TAG, "rcv'd incomplete frame: does not start with start tag");
+        ESP_LOGD(TAG, "rcv'd incomplete frame: does not start with start tag");
         this->buffer.clear();
         return;
     }
@@ -235,17 +312,29 @@ void WeiderWpComponent::read() {
         if(this->buffer.rfind("Code 99") != std::string::npos) {
             this->process_flag_ = PROCESS_CODES;
             this->last_received = millis();
+            this->command_expect_.clear();
         } else {
             return;
         }
-    }
-
-    if(this->buffer.find(FRAME_END) == std::string::npos) {
-        //ESP_LOGD(TAG, "rcv'd incomplete frame: frame end not found");
+    } else if(this->command_expect_ == "R") {
+        ESP_LOGD(TAG, "Got answer to reset: %s", this->buffer.c_str());
+        this->last_received = millis();
+        this->buffer.clear();
+        this->command_expect_.clear();
         return;
     }
 
-    ESP_LOGD(TAG, "Processing: %s", this->buffer.c_str());
+    if(this->buffer.size() < 2) {
+        ESP_LOGD(TAG, "Buffer has less than 2 bytes, invalid");
+        return;
+    }
+    //if(this->buffer[this->buffer.size()-1] != '\n' || this->buffer[this->buffer.size()-2] != '\r') {
+    if(this->buffer.rfind(FRAME_END) == std::string::npos) {
+        ESP_LOGD(TAG, "rcv'd incomplete frame: frame end not found");
+        return;
+    }
+
+    //ESP_LOGD(TAG, "Processing: %s", this->buffer.c_str());
     this->process_flag_ = PROCESS_SENSORS;
     this->last_received = millis();
 }

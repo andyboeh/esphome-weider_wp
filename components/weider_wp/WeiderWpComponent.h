@@ -4,6 +4,7 @@
 #include "esphome/components/uart/uart.h"
 #include "esphome/components/sensor/sensor.h"
 #include "esphome/components/binary_sensor/binary_sensor.h"
+#include "esphome/components/text_sensor/text_sensor.h"
 #include <map>
 
 namespace esphome {
@@ -66,13 +67,17 @@ class WeiderWpComponent : public Component, public uart::UARTDevice {
   void set_a14_binary_sensor(binary_sensor::BinarySensor *a14_binary_sensor) { a14_binary_sensor_ = a14_binary_sensor; }
   void set_a15_binary_sensor(binary_sensor::BinarySensor *a15_binary_sensor) { a15_binary_sensor_ = a15_binary_sensor; }
 
+  void set_error_sensor(text_sensor::TextSensor *error_sensor) { error_sensor_ = error_sensor; }
+
   void set_dtr_pin(GPIOPin *pin_dtr) { pin_dtr_ = pin_dtr; }
   float get_setup_priority() const override { return setup_priority::DATA; }
 
   void check_timeout();
   void process_sensors();
   void process_codes();
+  void process_error(std::string msg);
   void write();
+  void reset();
 
  protected:
   std::string buffer;
@@ -85,7 +90,8 @@ class WeiderWpComponent : public Component, public uart::UARTDevice {
   std::map<std::string, sensor::Sensor*> name_to_sensor_mapping_;
   std::vector<binary_sensor::BinarySensor*> binary_sensors_;
   std::string command_expect_;
-  std::vector<std::string> commands_to_send_;
+  std::string current_error_;
+  std::queue<std::string> commands_to_send_;
 
   sensor::Sensor *feed_temperature_sensor_;
   sensor::Sensor *brine_temperature_sensor_;
@@ -130,6 +136,7 @@ class WeiderWpComponent : public Component, public uart::UARTDevice {
   binary_sensor::BinarySensor *a14_binary_sensor_;
   binary_sensor::BinarySensor *a15_binary_sensor_;
 
+  text_sensor::TextSensor *error_sensor_{nullptr};
 };
 
 }  // namespace weider_wp

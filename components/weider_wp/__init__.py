@@ -26,6 +26,7 @@ weiderwp_ns = cg.esphome_ns.namespace("weider_wp")
 WeiderWpComponent = weiderwp_ns.class_("WeiderWpComponent", cg.Component, uart.UARTDevice)
 
 CONF_DTR_PIN = 'dtr_pin'
+CONF_WEIDER_ID = 'weider_id'
 MULTI_CONF = True
 
 CONFIG_SCHEMA = (
