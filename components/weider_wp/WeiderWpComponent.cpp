@@ -136,6 +136,25 @@ void WeiderWpComponent::process_codes() {
 
 }
 
+void WeiderWpComponent::get_codes() {
+    this->commands_to_send_.push("C\r\n");
+}
+
+void WeiderWpComponent::set_code(int code, int value) {
+    std::string buf = "C";
+    char code_t[3];
+    char val_t[5];
+    
+    sprintf(code_t, "%02d", code);
+    sprintf(val_t, "%04d", value);
+    buf += std::string(code_t);
+    buf += std::string(val_t);
+    buf += std::string(code_t);
+    buf += std::string(val_t);
+    buf += "C\r\n";
+    this->commands_to_send_.push(buf);
+}
+
 void WeiderWpComponent::process_error(std::string msg) {
     std::string part = msg.substr(4, msg.find(" ", 4) - 4);
     std::string error;
@@ -158,6 +177,8 @@ void WeiderWpComponent::process_error(std::string msg) {
         if(err & (1 << 6))
             error += "Verdampfer WP2, ";
         // According to the docs, this is 0x20, but this is plain wrong.
+        // According to the user manual, the error message displayed on the LCD
+        // matches "W8", corresponding to bit 7
         if(err & (1 << 7))
             error += "SI-Kette/Thermorel., ";
     } else if(part == "Temp.sensor") {
@@ -206,7 +227,7 @@ void WeiderWpComponent::process_sensors() {
 
     std::string temp = this->buffer.substr(0, pos);
     while(temp[0] == '\f' || temp[0] == '\r' || temp[0] == '\n') {
-        ESP_LOGD(TAG, "Removed %x", temp[0]);
+        //ESP_LOGD(TAG, "Removed %x", temp[0]);
         temp.erase(0, 1);
     }
 
@@ -239,7 +260,7 @@ void WeiderWpComponent::process_sensors() {
     }
     this->buffer.erase(0, pos + strlen(LINE_DELIMITER));
     if(this->buffer == "\r\n" || this->buffer == "") {
-        ESP_LOGD(TAG, "Set flag NONE");
+        //ESP_LOGD(TAG, "Set flag NONE");
         this->process_flag_ = PROCESS_NONE;
         this->buffer.clear();
         for(int i=0; i<16; i++) {
@@ -303,7 +324,7 @@ void WeiderWpComponent::read() {
     this->buffer.append(reinterpret_cast<const char*>(buf), bytes);
 
     if(this->buffer.find(FRAME_START) != 0 && this->command_expect_.empty()) {
-        ESP_LOGD(TAG, "rcv'd incomplete frame: does not start with start tag");
+        //ESP_LOGD(TAG, "rcv'd incomplete frame: does not start with start tag");
         this->buffer.clear();
         return;
     }
@@ -311,17 +332,17 @@ void WeiderWpComponent::read() {
     if(this->command_expect_ == "C") {
         if(this->buffer.rfind("Code 99") != std::string::npos) {
             this->process_flag_ = PROCESS_CODES;
-            this->last_received = millis();
             this->command_expect_.clear();
+            goto out;
         } else {
             return;
         }
     } else if(this->command_expect_ == "R") {
         ESP_LOGD(TAG, "Got answer to reset: %s", this->buffer.c_str());
-        this->last_received = millis();
-        this->buffer.clear();
-        this->command_expect_.clear();
-        return;
+        goto out_buffer;
+    } else if(this->command_expect_[0] == 'C' && this->command_expect_.length() == 16) {
+        ESP_LOGD(TAG, "Got answer to set command: %s", this->buffer.c_str());
+        goto out_buffer;
     }
 
     if(this->buffer.size() < 2) {
@@ -336,6 +357,12 @@ void WeiderWpComponent::read() {
 
     //ESP_LOGD(TAG, "Processing: %s", this->buffer.c_str());
     this->process_flag_ = PROCESS_SENSORS;
+    goto out;
+
+out_buffer:
+    this->buffer.clear();
+    this->command_expect_.clear();
+out:
     this->last_received = millis();
 }
 

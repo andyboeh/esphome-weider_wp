@@ -78,6 +78,8 @@ class WeiderWpComponent : public Component, public uart::UARTDevice {
   void process_error(std::string msg);
   void write();
   void reset();
+  void set_code(int code, int value);
+  void get_codes();
 
  protected:
   std::string buffer;

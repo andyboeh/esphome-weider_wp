@@ -15,6 +15,7 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome import pins
+from esphome import automation
 from esphome.components import uart, sensor
 from esphome.const import CONF_ID
 
@@ -24,9 +25,12 @@ DEPENDENCIES = ["uart"]
 
 weiderwp_ns = cg.esphome_ns.namespace("weider_wp")
 WeiderWpComponent = weiderwp_ns.class_("WeiderWpComponent", cg.Component, uart.UARTDevice)
+SetCodeAction = weiderwp_ns.class_("SetCodeAction", automation.Action)
 
 CONF_DTR_PIN = 'dtr_pin'
 CONF_WEIDER_ID = 'weider_id'
+CONF_CODE = 'code'
+CONF_VALUE = 'value'
 MULTI_CONF = True
 
 CONFIG_SCHEMA = (
@@ -39,6 +43,36 @@ CONFIG_SCHEMA = (
     .extend(cv.COMPONENT_SCHEMA)
     .extend(uart.UART_DEVICE_SCHEMA)
 )
+
+@automation.register_action(
+    "weider_wp.set_code",
+    SetCodeAction,
+    automation.maybe_simple_id(
+        {
+             cv.GenerateID(): cv.use_id(WeiderWpComponent),
+            cv.Required(CONF_CODE): cv.templatable(
+              cv.int_range(min=1, max=99),
+            ),
+            cv.Required(CONF_VALUE): cv.templatable(
+              cv.int_range(min=-999, max=9999),
+            ),
+        },
+    ),
+)
+
+async def set_code_to_code(config, action_id, template_arg, args):
+    paren = await cg.get_variable(config[CONF_ID])
+    var = cg.new_Pvariable(action_id, template_arg, paren)
+    if CONF_CODE in config and CONF_VALUE in config:
+        template_ = await cg.templatable(
+            config[CONF_CODE], args, cg.int_
+        )
+        value_ = await cg.templatable(
+            config[CONF_VALUE], args, cg.int_
+        )
+        cg.add(var.set_code(template_))
+        cg.add(var.set_value(value_))
+    return var
 
 async def to_code(config):
     var = cg.new_Pvariable(config[CONF_ID])
