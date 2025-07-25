@@ -21,6 +21,7 @@
 
 #define VERSION "0.0.2"
 #define WEIDER_RECV_TIMEOUT 60 * 1000
+#define WEIDER_RECV_FRAME_TIMEOUT 2 * 1000
 
 namespace esphome {
 namespace weider_wp {
@@ -82,7 +83,6 @@ void WeiderWpComponent::setup() {
     binary_sensors_.push_back(this->a13_binary_sensor_);
     binary_sensors_.push_back(this->a14_binary_sensor_);
     binary_sensors_.push_back(this->a15_binary_sensor_);
-    this->setup_timeout = millis();
 }
 
 void WeiderWpComponent::loop() {
@@ -110,7 +110,7 @@ void WeiderWpComponent::write() {
 }
 
 void WeiderWpComponent::check_timeout() {
-    if((millis() - this->last_received) > WEIDER_RECV_TIMEOUT) {
+    if((millis() - this->last_received_) > WEIDER_RECV_TIMEOUT) {
         ESP_LOGD(TAG, "Receive Timeout, invalidating all sensors");
 
         {
@@ -127,7 +127,13 @@ void WeiderWpComponent::check_timeout() {
                 this->binary_sensors_[i]->publish_state(NAN);
         }
 
-        this->last_received = millis();
+        this->last_received_ = millis();
+    }
+    if((millis() - this->last_data_received_) > WEIDER_RECV_FRAME_TIMEOUT) {
+        if(this->buffer.size() > 0) {
+            ESP_LOGE(TAG, "Recv timeout, possibly incomplete frame. Clearing buffers");
+            this->buffer.clear();
+        }
     }
 }
 
@@ -201,12 +207,11 @@ void WeiderWpComponent::process_sensors() {
     if(pos == std::string::npos)
         return;
 
-    //ESP_LOGD(TAG, "Processing: %s", this->buffer.c_str());
-    //ESP_LOGD(TAG, "%s", this->buffer.c_str());
+    ESP_LOGV(TAG, "Processing: %s", this->buffer.c_str());
 
     std::string temp = this->buffer.substr(0, pos);
     while(temp[0] == '\f' || temp[0] == '\r' || temp[0] == '\n') {
-        ESP_LOGD(TAG, "Removed %x", temp[0]);
+        ESP_LOGV(TAG, "Removed %x", temp[0]);
         temp.erase(0, 1);
     }
 
@@ -235,11 +240,11 @@ void WeiderWpComponent::process_sensors() {
         // Error
         this->process_error(temp);
     } else {
-        ESP_LOGD(TAG, "Did not yet understand %s", temp.c_str());
+        ESP_LOGV(TAG, "Did not yet understand %s", temp.c_str());
     }
     this->buffer.erase(0, pos + strlen(LINE_DELIMITER));
     if(this->buffer == "\r\n" || this->buffer == "") {
-        ESP_LOGD(TAG, "Set flag NONE");
+        ESP_LOGV(TAG, "Set flag NONE");
         this->process_flag_ = PROCESS_NONE;
         this->buffer.clear();
         for(int i=0; i<16; i++) {
@@ -266,7 +271,7 @@ void WeiderWpComponent::process_sensors() {
             this->error_sensor_->publish_state(this->current_error_);
         this->current_error_.clear();
     }
-    //ESP_LOGD(TAG, "Buffer left: %s", this->buffer.c_str());
+    ESP_LOGV(TAG, "Buffer left: %s", this->buffer.c_str());
 
 }
 
@@ -279,13 +284,13 @@ void WeiderWpComponent::read() {
     uint8_t buf[512];
     uint8_t bytes = 0;
     while (cnt > 0) {
-        //ESP_LOGD(TAG, "%d bytes available, reading", cnt);
+        ESP_LOGV(TAG, "%d bytes available, reading", cnt);
         if((bytes + cnt) < sizeof(buf)) {
             this->read_array(&buf[bytes], cnt);
             bytes += cnt;
             cnt = this->available();
         } else {
-            //ESP_LOGD(TAG, "rcv'd incomplete frame, clearing buffer");
+            ESP_LOGE(TAG, "rcv'd more bytes than buffer size, clearing buffer");
             while(cnt > 0) {
                 this->read_array(buf, cnt);
                 cnt = this->available();
@@ -298,45 +303,54 @@ void WeiderWpComponent::read() {
     if(bytes == 0)
         return;
 
+    this->last_data_received_ = millis();
+
     //std::string tmp(reinterpret_cast<const char*>(buf), bytes);
     //ESP_LOGD(TAG, "Read %d bytes as %s", bytes, tmp.c_str());
     this->buffer.append(reinterpret_cast<const char*>(buf), bytes);
 
-    if(this->buffer.find(FRAME_START) != 0 && this->command_expect_.empty()) {
-        ESP_LOGD(TAG, "rcv'd incomplete frame: does not start with start tag");
-        this->buffer.clear();
-        return;
+    if(this->command_expect_.empty()) {
+        if(this->buffer.size() > 2) {
+            if(this->buffer.find(FRAME_START) != 0) {
+                ESP_LOGE(TAG, "rcv'd incomplete frame: does not start with start tag");
+                this->buffer.clear();
+                return;
+            }
+        } else {
+            ESP_LOGV(TAG, "rcv'd less than three bytes for frame, need more bytes");
+            return;
+        }
     }
 
     if(this->command_expect_ == "C") {
         if(this->buffer.rfind("Code 99") != std::string::npos) {
             this->process_flag_ = PROCESS_CODES;
-            this->last_received = millis();
+            this->last_received_ = millis();
             this->command_expect_.clear();
         } else {
             return;
         }
     } else if(this->command_expect_ == "R") {
-        ESP_LOGD(TAG, "Got answer to reset: %s", this->buffer.c_str());
-        this->last_received = millis();
+        ESP_LOGV(TAG, "Got answer to reset: %s", this->buffer.c_str());
+        this->last_received_ = millis();
         this->buffer.clear();
         this->command_expect_.clear();
         return;
     }
 
     if(this->buffer.size() < 2) {
-        ESP_LOGD(TAG, "Buffer has less than 2 bytes, invalid");
+        ESP_LOGE(TAG, "Buffer has less than 2 bytes, invalid");
         return;
     }
     //if(this->buffer[this->buffer.size()-1] != '\n' || this->buffer[this->buffer.size()-2] != '\r') {
     if(this->buffer.rfind(FRAME_END) == std::string::npos) {
-        ESP_LOGD(TAG, "rcv'd incomplete frame: frame end not found");
+        ESP_LOGV(TAG, "rcv'd incomplete frame: frame end not found");
         return;
     }
 
-    //ESP_LOGD(TAG, "Processing: %s", this->buffer.c_str());
+    ESP_LOGV(TAG, "Processing: %s", this->buffer.c_str());
     this->process_flag_ = PROCESS_SENSORS;
-    this->last_received = millis();
+    this->last_received_ = millis();
 }
 
 } // weider_wp

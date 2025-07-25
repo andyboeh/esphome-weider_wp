@@ -82,8 +82,8 @@ class WeiderWpComponent : public Component, public uart::UARTDevice {
  protected:
   std::string buffer;
   GPIOPin *pin_dtr_{nullptr};
-  uint32_t last_received{0};
-  uint32_t setup_timeout{0};
+  uint32_t last_received_{0};
+  uint32_t last_data_received_{0};
   bool input_states_[11];
   bool output_states_[16];
   t_process_states process_flag_{PROCESS_NONE};

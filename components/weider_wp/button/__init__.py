@@ -10,9 +10,8 @@ CODEOWNERS = ["@andyboeh"]
 
 WeiderButton = weiderwp_ns.class_("WeiderButton", button.Button, cg.Component)
 
-CONFIG_SCHEMA = button.BUTTON_SCHEMA.extend(
+CONFIG_SCHEMA = button.button_schema(WeiderButton).extend(
     {
-        cv.GenerateID(): cv.declare_id(WeiderButton),
         cv.GenerateID(CONF_WEIDER_ID): cv.use_id(WeiderWpComponent),
     }
 ).extend(cv.COMPONENT_SCHEMA)
